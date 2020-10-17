@@ -29,11 +29,15 @@ def extract_data(ExtractorClass, year_range, output_filename, base_url,
     extractor_name = ExtractorClass.__name__.replace("Extractor", "")
     extractor = ExtractorClass(base_url, censor=censor)
     output_fobj = open_compressed(output_filename, mode="w", encoding="utf-8")
+
+    f_names = list(extractor.schema.keys())
     writer = csv.DictWriter(
         output_fobj,
-        fieldnames=list(extractor.schema.keys()),
+        fieldnames=f_names,
     )
     writer.writeheader()
+
+    f_names = set(f_names)
     for year in year_range:
         print(f"{extractor_name} {year}")
 
@@ -45,7 +49,11 @@ def extract_data(ExtractorClass, year_range, output_filename, base_url,
         if not download_only:
             data = extractor.extract(year)
             for row in tqdm(data, desc="  Extracting..."):
-                writer.writerow(row)
+                try:
+                    writer.writerow(row)
+                except:
+                    filtered_rows = {k:v for k,v in row.items() if k in f_names}
+                    writer.writerow(filtered_rows)
 
         print()
     output_fobj.close()
